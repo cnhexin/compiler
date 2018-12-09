@@ -16,7 +16,12 @@ data Expr = Val Integer | Var String |
             Plus Expr Expr | Minus Expr Expr | Times Expr Expr | Div Expr Expr |
 			Not Expr
             deriving Eq
-
+			
+instance Show Expr where
+  show a = prettyShowE a 
+  
+instance Show Stmts where
+  show a = prettyShowS a
 --eval :: Expr -> Integer
 --eval (Val x) = x
 --eval (Plus x y) = eval x + eval y 
@@ -24,6 +29,8 @@ data Expr = Val Integer | Var String |
 --instance Show Expr where
   --show (Val x) = show x
   --show (Plus x y) = show (eval x) ++ "+" ++ show (eval y)
+
+
 prettyShowS :: Stmts -> String
 prettyShowS (Assign s a) = "Assign " ++ s ++ " " ++ (prettyShowE a)
 prettyShowS (While a s) = "While " ++ (prettyShowE a) ++ " " ++ (prettyShowS s)
@@ -37,3 +44,4 @@ prettyShowE (Minus x y) = (prettyShowE x) ++ " - " ++ (prettyShowE y)
 prettyShowE (Times x y) = (prettyShowE x) ++ " * " ++ (prettyShowE y)
 prettyShowE (Div x y) = (prettyShowE x) ++ " / " ++ (prettyShowE y)
 prettyShowE (Not x) = " ! " ++ (prettyShowE x)
+prettyShowE (Var x) = x
