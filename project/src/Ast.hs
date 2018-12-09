@@ -1,6 +1,7 @@
 module Ast where
 
-type Program = [Stmts] -- TODO: your ast here
+type Program = [Stmts]
+type Arguments = [Expr] -- TODO: your ast here
 
 -- TODO: Ast should have at least Eq and Show instances
 
@@ -8,13 +9,14 @@ data Stmts = Assign String Expr |
              While Expr Stmts |
              Block [Stmts] |
              If Expr Stmts |
-             Else Stmts 
+             IfElse Expr Stmts Stmts |
+			 Func String Expr Stmts
              deriving Eq
        
 
 data Expr = Val Integer | Var String |
             Plus Expr Expr | Minus Expr Expr | Times Expr Expr | Div Expr Expr |
-			Not Expr
+			Not Expr | Arg [Expr]
             deriving Eq
 			
 instance Show Expr where
@@ -32,8 +34,14 @@ instance Show Stmts where
 
 
 prettyShowS :: Stmts -> String
-prettyShowS (Assign s a) = "Assign " ++ s ++ " " ++ (prettyShowE a)
+prettyShowS (Assign s a) = s ++ " = " ++ (prettyShowE a)
 prettyShowS (While a s) = "While " ++ (prettyShowE a) ++ " " ++ (prettyShowS s)
+prettyShowS (Block []) = ""
+prettyShowS (Block (s:rest)) = (prettyShowS s) ++ " " ++ (prettyShowS (Block rest))
+prettyShowS (If x y) = "if " ++ (prettyShowE x) ++ " " ++ (prettyShowS y)
+prettyShowS (IfElse x y z) = "if " ++ (prettyShowE x) ++ " " ++ (prettyShowS y) ++ " else " ++ (prettyShowS z)
+prettyShowS (Func x y z) = "def " ++ x ++ " " ++ (prettyShowE y) ++ " " ++ (prettyShowS z)
+
  
 prettyShowE :: Expr -> String
 prettyShowE (Val i) = if i < 0
@@ -45,3 +53,5 @@ prettyShowE (Times x y) = (prettyShowE x) ++ " * " ++ (prettyShowE y)
 prettyShowE (Div x y) = (prettyShowE x) ++ " / " ++ (prettyShowE y)
 prettyShowE (Not x) = " ! " ++ (prettyShowE x)
 prettyShowE (Var x) = x
+prettyShowE (Arg []) = ""
+prettyShowE (Arg (s:rest)) = (prettyShowE s) ++ " " ++ (prettyShowE (Arg rest))

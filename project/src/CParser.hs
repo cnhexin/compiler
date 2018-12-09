@@ -3,7 +3,7 @@ module CParser where
 import Ast
 import ParserMonad
 
-keywords = ["if","then","else", "let", "in", "true","false"]
+keywords = ["if","then","else", "let", "in", "true","false","def"]
 
 parser :: Parser Program
 parser = (do s <- parserS
@@ -11,12 +11,19 @@ parser = (do s <- parserS
              return (s:rest))
              <||> do s <- parserS
                      return [s]
+					 
+parserA :: Parser Arguments
+parserA = (do s <- parserE
+              rest <- parserA
+              return (s:rest))
+              <||> do s <- parserE
+                      return [s]
 
 parserE :: Parser Expr
 parserE = addSubExpr <||> multDivExpr <||> notExp <||> atoms
 
 parserS :: Parser Stmts
-parserS = whileParser <||> assignParser
+parserS = funcParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser
 
 
 ints :: Parser Expr
@@ -40,6 +47,13 @@ notExp = (do token $ literal "!"
              ares <- notExp
              return $ Not ares)
              <||> atoms
+			 
+argParser :: Parser Expr
+argParser = (do s <- parserE
+                rest <- parserA
+                return $ (Arg (s:rest)))
+                <||> do s <- parserE
+                        return $ (Arg [s])
 
 atoms :: Parser Expr
 atoms = ints <||> parens <||> vars
@@ -62,18 +76,51 @@ whileParser = do token $ literal "while"
                  l <- token $ parserE
                  token $ literal ")"
                  token $ literal "{"
-                 r <- token $ parserS
+                 r <- token $ blockParser
                  token $ literal "}"
                  return $ While l r	
-
+				 
+blockParser :: Parser Stmts
+blockParser = (do s <- parserS
+                  rest <- parser
+                  return $ (Block (s:rest)))
+                  <||> do s <- parserS
+                          return $ (Block [s])
+						  
 ifParser :: Parser Stmts
 ifParser = do token $ literal "if"
+              token $ literal "("
               l <- token $ parserE
-              r <- token $ parserS
+              token $ literal ")"
+              token $ literal "{"
+              r <- token $ blockParser
+              token $ literal "}"
               return $ If l r
 
 ifElseParser :: Parser Stmts
-ifElseParser = undefined
+ifElseParser = do token $ literal "if"
+                  token $ literal "("
+                  x <- token $ parserE
+                  token $ literal ")"
+                  token $ literal "{"
+                  y <- token $ blockParser
+                  token $ literal "}"
+                  token $ literal "else"
+                  token $ literal "{"
+                  z <- token $ blockParser
+                  token $ literal "}"
+                  return $ IfElse x y z
+				  
+funcParser :: Parser Stmts
+funcParser = do token $ literal "def"
+                x <- token $ varParser
+                token $ literal "("
+                y <- token $ argParser
+                token $ literal ")"
+                token $ literal "{"
+                z <- token $ blockParser
+                token $ literal "}"
+                return $ Func x y z
                 
                				 
 
