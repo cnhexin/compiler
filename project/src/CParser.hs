@@ -6,9 +6,13 @@ import ParserMonad
 parser :: Parser Program
 parser = undefined
 
+parserE :: Parser Expr
+parserE = undefined
+
+
 ints :: Parser Expr
 ints = do i <- token $ intParser
-          return $ ValInt i
+          return $ Val i
 		  
 addSubExpr :: Parser Expr
 addSubExpr = withInfix multDivExpr [("+",Plus),("-", Minus)]
@@ -17,15 +21,21 @@ multDivExpr :: Parser Expr
 multDivExpr = withInfix notExp [("*",Times),("/",Div)]
 
 notExp :: Parser Expr
-notExp = undefined
+notExp = (do token $ literal "!"
+             ares <- notExp
+             return $ Not ares)
+             <||> atoms
 
 atoms :: Parser Expr
-atoms = ints 
+atoms = ints <||> parens
 
-parens :: Parser Program
+parens :: Parser Expr
 parens = do token (literal "(")
-            res <- parser
+            res <- parserE
             token (literal ")")
-            return res	 
+            return res
+			
+assignParser :: Parser Stmts
+assignParser = undefined 			
 
 
