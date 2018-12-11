@@ -4,19 +4,38 @@ type Program = [Stmts]
 type Arguments = [Expr] -- TODO: your ast here
 
 -- TODO: Ast should have at least Eq and Show instances
-
+data Op = I Integer | S String | B Bool
 data Stmts = Assign String Expr |
              While Expr Stmts |
              Block [Stmts] |
              If Expr Stmts |
              IfElse Expr Stmts Stmts |
-			 Func String Expr Stmts
+			 Func String Expr Stmts |
+             FuncNoArg String Stmts |
+             Return Expr |
+             Print String |
+             Break |
+             Continue 
              deriving Eq
-       
-
-data Expr = Val Integer | Var String |
-            Plus Expr Expr | Minus Expr Expr | Times Expr Expr | Div Expr Expr |
-			Not Expr | Arg [Expr]
+--  TODO : Arg [Expr] eval?
+data Expr = Val Integer | 
+            Var String |
+            Plus Expr Expr | 
+            Minus Expr Expr | 
+            Times Expr Expr | 
+            Div Expr Expr |
+            Mod Expr Expr |
+            And Expr Expr |
+            Or Expr Expr |
+            Not Expr |
+            Arg [Expr] |
+            Eq Expr Expr |
+            NotEq Expr Expr |
+            Lt Expr Expr |
+            Gt Expr Expr |
+            Le Expr Expr |
+            Ge Expr Expr |
+            Rev Expr
             deriving Eq
 			
 instance Show Expr where
@@ -55,3 +74,9 @@ prettyShowE (Not x) = " ! " ++ (prettyShowE x)
 prettyShowE (Var x) = x
 prettyShowE (Arg []) = ""
 prettyShowE (Arg (s:rest)) = (prettyShowE s) ++ " " ++ (prettyShowE (Arg rest))
+prettyShowE (Eq x y) = (prettyShowE x) ++ " == " ++ (prettyShowE y)
+prettyShowE (NotEq x y) = (prettyShowE x) ++ " /= " ++ (prettyShowE y)
+prettyShowE (Lt x y) = (prettyShowE x) ++ " < " ++ (prettyShowE y)
+prettyShowE (Gt x y) = (prettyShowE x) ++ " > " ++ (prettyShowE y)
+prettyShowE (Le x y) = (prettyShowE x) ++ " <= " ++ (prettyShowE y)
+prettyShowE (Ge x y) = (prettyShowE x) ++ " >= " ++ (prettyShowE y)

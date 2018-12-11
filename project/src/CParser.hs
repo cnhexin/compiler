@@ -48,6 +48,48 @@ notExp = (do token $ literal "!"
              return $ Not ares)
              <||> atoms
 			 
+eqParser :: Parser Expr
+eqParser = (do x <- parserE
+               token $ literal "=="
+               y <- parserE
+               return $ Eq x y)
+               <||> atoms
+			   
+notEqParser :: Parser Expr
+notEqParser = (do x <- parserE
+                  token $ literal "/="
+                  y <- parserE
+                  return $ NotEq x y)
+                  <||> atoms
+			   
+ltParser :: Parser Expr
+ltParser = (do x <- parserE
+               token $ literal "<"
+               y <- parserE
+               return $ Lt x y)
+               <||> atoms
+
+gtParser :: Parser Expr
+gtParser = (do x <- parserE
+               token $ literal ">"
+               y <- parserE
+               return $ Gt x y)
+               <||> atoms
+
+leParser :: Parser Expr
+leParser = (do x <- parserE
+               token $ literal "<="
+               y <- parserE
+               return $ Le x y)
+               <||> atoms
+			   
+geParser :: Parser Expr
+geParser = (do x <- parserE
+               token $ literal ">="
+               y <- parserE
+               return $ Ge x y)
+               <||> atoms
+			 
 argParser :: Parser Expr
 argParser = (do s <- parserE
                 rest <- parserA
