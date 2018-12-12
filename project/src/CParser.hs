@@ -20,7 +20,7 @@ parserA = (do s <- parserE
                       return [s]
 
 parserE :: Parser Expr
-parserE = addSubExpr <||> multDivExpr <||> notExp <||> atoms
+parserE = orParser <||> andParser <||> addSubExpr <||> multDivExpr <||> notExp <||> revParser <||> atoms
 
 parserS :: Parser Stmts
 parserS = funcParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser
@@ -41,6 +41,14 @@ addSubExpr = withInfix multDivExpr [("+",Plus),("-", Minus)]
 
 multDivExpr :: Parser Expr
 multDivExpr = withInfix notExp [("*",Times),("/",Div)]
+
+orParser :: Parser Expr
+orParser = withInfix andParser [("||", Or)]
+
+andParser :: Parser Expr
+andParser = withInfix addSubExpr [("&&", And)]
+
+
 
 notExp :: Parser Expr
 notExp = (do token $ literal "!"
@@ -96,6 +104,11 @@ argParser = (do s <- parserE
                 return $ (Arg (s:rest)))
                 <||> do s <- parserE
                         return $ (Arg [s])
+						
+revParser :: Parser Expr
+revParser = do token $ literal "-"
+               x <- parserE
+               return $ Rev x
 
 atoms :: Parser Expr
 atoms = ints <||> parens <||> vars
@@ -105,6 +118,17 @@ parens = do token (literal "(")
             res <- parserE
             token (literal ")")
             return res
+			
+callParser :: Parser Expr
+callParser = do token $ literal "call"
+                x <- token $ varParser
+                y <- token $ argParser
+                return $ Call x y
+				
+callNoArgParser :: Parser Expr
+callNoArgParser = do token $ literal "callNoArg"
+                     x <- token $ varParser
+                     return $ CallNoArg x
 			
 assignParser :: Parser Stmts
 assignParser = do l <- token $ varParser
@@ -163,7 +187,18 @@ funcParser = do token $ literal "def"
                 z <- token $ blockParser
                 token $ literal "}"
                 return $ Func x y z
+				
+returnParser :: Parser Stmts
+returnParser = do token $ literal "return"
+                  x <- token $ argParser
+                  return $ Return x
+				  
+printParser :: Parser Stmts
+printParser = do token $ literal "print"
+                 x <- token $ varParser
+                 return $ Print x
                 
-               				 
+
+                              				 
 
 

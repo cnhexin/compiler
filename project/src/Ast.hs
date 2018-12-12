@@ -35,7 +35,9 @@ data Expr = Val Integer |
             Gt Expr Expr |
             Le Expr Expr |
             Ge Expr Expr |
-            Rev Expr
+            Rev Expr |
+			Call String Expr |
+			CallNoArg String
             deriving Eq
 			
 instance Show Expr where
@@ -80,3 +82,5 @@ prettyShowE (Lt x y) = (prettyShowE x) ++ " < " ++ (prettyShowE y)
 prettyShowE (Gt x y) = (prettyShowE x) ++ " > " ++ (prettyShowE y)
 prettyShowE (Le x y) = (prettyShowE x) ++ " <= " ++ (prettyShowE y)
 prettyShowE (Ge x y) = (prettyShowE x) ++ " >= " ++ (prettyShowE y)
+prettyShowE (Call x y) = "Call " ++ x ++ " " ++ (prettyShowE y)
+prettyShowE (CallNoArg x) = "Call " ++ x
