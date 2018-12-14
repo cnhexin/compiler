@@ -2,12 +2,13 @@ module ASTInterpreter where
 
 import Ast
 import StatefulUnsafeMonad
-import Data.Map(Map, lookup, insert, empty, fromList)
+-- import Prelude hiding (lookup)
+import Data.Map(Map, lookup, insert, empty, fromList, findWithDefault)
 -- Monad has three states :
 --                   Global            Local           Output
 type State = ((Map String Stmts),(Map String Integer),[String]) -- TODO change to be the type of state, you have freedom for how you implement it
 -- return type of eval statement
-data StmtRes = Normal | Ret Integer | RetBR | RetCN
+data StmtRes = Normal | Ret Integer | RetBR | RetCN deriving(Show)
 
 -- *****************************************
 -- helper functions
@@ -30,6 +31,7 @@ getSt s m = case Data.Map.lookup s m of
                  (Just (FuncNoArg _ st)) -> st
                  (Just (Func _ _ st2)) -> st2
                  _ -> undefined
+
 -- this method must be used in statements which have a integer as return value
 getRetFromSt :: Stmts -> State -> (Unsafe Integer, State)
 getRetFromSt stmts (global_state, local_state, output) = case ((app (evalSt stmts)) (global_state, local_state, output)) of
@@ -43,6 +45,22 @@ getRetFromSt stmts (global_state, local_state, output) = case ((app (evalSt stmt
 -- findArgList :: String -> Map String Stmts -> 
 -- ******************************************
 -- TODO : eval program
+--test ::
+-- test : 
+       --    1   Assign String Expr       
+       --    1   While Expr Stmts |
+       --    1   Block [Stmts] |
+       --    1   If Expr Stmts |
+       --    1   IfElse Expr Stmts Stmts |
+       --    1   Func String Expr Stmts |
+       --    1   FuncNoArg String Stmts |
+       --    1   Return Expr |
+       --    1   Print String |
+       --    1   Break |
+       --    1   Continue 
+testCase = While (Lt (Var "x") (Val 8) ) (Block [Print "x", Assign "x" (Plus (Var "x") (Val 1)), IfElse (Gt (Var "x") (Val 3)) (Return (Val 0)) (Print "x")])
+-- testCase = Func "main" (Arg [(Val 1), (Val 2)]) (Print "x")
+test = app (evalSt testCase) (Data.Map.empty, insert "x" 1 Data.Map.empty, [])
 evalSt :: Stmts -> StatefulUnsafe State StmtRes
 evalSt (Assign s e) = do res <- evalEx e
                          setVal s res
@@ -78,6 +96,8 @@ evalSt _ = undefined
 
 evalEx :: Expr -> StatefulUnsafe State Integer
 evalEx (Val num) = return num
+evalEx (Var s) = StatefulUnsafe $ \(global_state, local_state, output) -> let x = Data.Map.lookup s local_state
+                                                                          in ((Ok (getValFromMaybe x)), (global_state, local_state, output))
 evalEx (Plus a b) = do left <- evalEx a
                        right <- evalEx b
                        return (left + right)
@@ -107,32 +127,32 @@ evalEx (Not r) = do right <- evalEx r
                     if (not (intToBool right)) then return 1 else return 0
 evalEx (Eq l r) = do left <- evalEx l
                      right <- evalEx r
-                     if ((intToBool left) == (intToBool right)) then return 1 else return 0
+                     if left == right then return 1 else return 0
 evalEx (NotEq l r) = do left <- evalEx l
                         right <- evalEx r
-                        if ((intToBool left) /= (intToBool right)) then return 1 else return 0
+                        if left /= right then return 1 else return 0
 evalEx (Lt l r) = do left <- evalEx l
                      right <- evalEx r
-                     if ((intToBool left) < (intToBool right)) then return 1 else return 0
+                     if left < right then return 1 else return 0
 evalEx (Le l r) = do left <- evalEx l
                      right <- evalEx r
-                     if ((intToBool left) <= (intToBool right)) then return 1 else return 0
+                     if right <= left then return 1 else return 0
 evalEx (Gt l r) = do left <- evalEx l
                      right <- evalEx r
-                     if ((intToBool left) > (intToBool right)) then return 1 else return 0
+                     if left > right then return 1 else return 0
 evalEx (Ge l r) = do left <- evalEx l
                      right <- evalEx r
-                     if ((intToBool left) >= (intToBool right)) then return 1 else return 0
+                     if left >= right then return 1 else return 0
 evalEx (Rev v) = do v <- evalEx v
                     return (negate v)
 -- TODO:eval functions includes arguments
 -- evalEx (Call s Arg[x:xs]) =   
 -- each time reset local environment to empty
-evalEx (CallNoArg s) = StatefulUnsafe $ \(global_state, local_state, output) -> (getRetFromSt (getSt s global_state) (global_state, Data.Map.empty, output))               
+evalEx (CallNoArg s) = StatefulUnsafe $ \(global_state, local_state, output) -> (getRetFromSt (getSt s global_state) (global_state, Data.Map.empty, output))
+evalEx _ = undefined
 cleanLocals :: StatefulUnsafe State a -> StatefulUnsafe State a
 cleanLocals x = StatefulUnsafe $ \ (global_state, local_state, output) -> case (app x (global_state, Data.Map.empty, output)) of
-                                                                               (Ok a, (global_state', _, newOutput)) -> (Ok a,(global_state, local_state, newOutput))
--- evalEx _ = undefined
+                                                                               (Ok a, (_, _, newOutput)) -> (Ok a,(global_state, local_state, newOutput))
 
 -- order : 
 -- 1. eval all the functions

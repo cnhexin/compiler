@@ -62,7 +62,9 @@ prettyShowS (Block (s:rest)) = (prettyShowS s) ++ " " ++ (prettyShowS (Block res
 prettyShowS (If x y) = "if " ++ (prettyShowE x) ++ " " ++ (prettyShowS y)
 prettyShowS (IfElse x y z) = "if " ++ (prettyShowE x) ++ " " ++ (prettyShowS y) ++ " else " ++ (prettyShowS z)
 prettyShowS (Func x y z) = "def " ++ x ++ " " ++ (prettyShowE y) ++ " " ++ (prettyShowS z)
-
+prettyShowS (FuncNoArg x y) = "def " ++ x ++ " " ++ (prettyShowS y)
+prettyShowS (Return x) = "return " ++ (prettyShowE x)
+prettyShowS (Print x) = "print " ++ x
  
 prettyShowE :: Expr -> String
 prettyShowE (Val i) = if i < 0
@@ -72,6 +74,9 @@ prettyShowE (Plus x y) = (prettyShowE x) ++ " + " ++ (prettyShowE y)
 prettyShowE (Minus x y) = (prettyShowE x) ++ " - " ++ (prettyShowE y)
 prettyShowE (Times x y) = (prettyShowE x) ++ " * " ++ (prettyShowE y)
 prettyShowE (Div x y) = (prettyShowE x) ++ " / " ++ (prettyShowE y)
+prettyShowE (Mod x y) = (prettyShowE x) ++ " % " ++ (prettyShowE y)
+prettyShowE (And x y) = (prettyShowE x) ++ " && " ++ (prettyShowE y)
+prettyShowE (Or x y) = (prettyShowE x) ++ " || " ++ (prettyShowE y)
 prettyShowE (Not x) = " ! " ++ (prettyShowE x)
 prettyShowE (Var x) = x
 prettyShowE (Arg []) = ""
@@ -82,5 +87,6 @@ prettyShowE (Lt x y) = (prettyShowE x) ++ " < " ++ (prettyShowE y)
 prettyShowE (Gt x y) = (prettyShowE x) ++ " > " ++ (prettyShowE y)
 prettyShowE (Le x y) = (prettyShowE x) ++ " <= " ++ (prettyShowE y)
 prettyShowE (Ge x y) = (prettyShowE x) ++ " >= " ++ (prettyShowE y)
-prettyShowE (Call x y) = "Call " ++ x ++ " " ++ (prettyShowE y)
-prettyShowE (CallNoArg x) = "Call " ++ x
+prettyShowE (Rev x) = " -" ++ (prettyShowE x)
+prettyShowE (Call x y) = x ++ "(" ++ (prettyShowE y) ++ ")"
+prettyShowE (CallNoArg x) = x ++ "()"

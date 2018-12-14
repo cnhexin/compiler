@@ -16,7 +16,6 @@ parse (Parser f) = f
 
 
 
-
 instance Functor Parser where
   -- fmap :: (a -> b) -> Parser a -> Parser b
   fmap f (Parser pa) =  Parser $ \ x -> case pa x of
@@ -135,11 +134,12 @@ token pa = do spaces
 
 
 -- parse what we will consider a good variable name
+
+
 varParser :: Parser String
 varParser = do chars <- some (sat isAlpha)
                return chars
-
-
+			   
 
 oneOf :: [Parser a] -> Parser a
 oneOf [] = failParse

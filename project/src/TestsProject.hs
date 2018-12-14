@@ -1,11 +1,15 @@
 module TestsProject where
 
+import Ast
+import ParserMonad
+import CParser
+
 -- Test 1: Just a simple example of expression evaluation
 test1 = concat [
    "def main() {                       ",
    "   x = 6;                     ",
    "   y = 8;                    ",
-   "   z = x * y / 3 + -x + 2 * y;                     ",
+   "   z = x * y / 3 + -1 + 2 * y;                     ",
    "   w = z - x % (x - 2);                    ",
    "   print w;                    ",
    "   return 0;                     ",

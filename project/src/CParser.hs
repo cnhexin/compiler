@@ -6,10 +6,10 @@ import ParserMonad
 keywords = ["if","then","else", "let", "in", "true","false","def"]
 
 parser :: Parser Program
-parser = (do s <- parserS
-             rest <- parser
+parser = (do s <- token $ parserS
+             rest <- token $ parser
              return (s:rest))
-             <||> do s <- parserS
+             <||> do s <- token $ parserS
                      return [s]
 					 
 parserA :: Parser Arguments
@@ -20,10 +20,10 @@ parserA = (do s <- parserE
                       return [s]
 
 parserE :: Parser Expr
-parserE = orParser <||> andParser <||> addSubExpr <||> multDivExpr <||> notExp <||> revParser <||> atoms
+parserE = orParser <||> andParser <||> notEqParser <||> compareEqParser <||> compareParser <||> addSubExpr <||> multDivExpr <||> revParser <||> notExp <||> atoms
 
 parserS :: Parser Stmts
-parserS = funcParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser
+parserS = funcParser <||> funcNoArgParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser <||> returnParser <||> printParser
 
 
 ints :: Parser Expr
@@ -40,78 +40,44 @@ addSubExpr :: Parser Expr
 addSubExpr = withInfix multDivExpr [("+",Plus),("-", Minus)]
 
 multDivExpr :: Parser Expr
-multDivExpr = withInfix notExp [("*",Times),("/",Div)]
+multDivExpr = withInfix notExp [("*",Times),("/",Div),("%",Mod)]
 
 orParser :: Parser Expr
 orParser = withInfix andParser [("||", Or)]
 
 andParser :: Parser Expr
-andParser = withInfix addSubExpr [("&&", And)]
-
-
+andParser = withInfix notEqParser [("&&", And)]
 
 notExp :: Parser Expr
 notExp = (do token $ literal "!"
              ares <- notExp
              return $ Not ares)
-             <||> atoms
-			 
-eqParser :: Parser Expr
-eqParser = (do x <- parserE
-               token $ literal "=="
-               y <- parserE
-               return $ Eq x y)
-               <||> atoms
-			   
+			 <||> atoms
+               			   
 notEqParser :: Parser Expr
-notEqParser = (do x <- parserE
-                  token $ literal "/="
-                  y <- parserE
-                  return $ NotEq x y)
-                  <||> atoms
-			   
-ltParser :: Parser Expr
-ltParser = (do x <- parserE
-               token $ literal "<"
-               y <- parserE
-               return $ Lt x y)
-               <||> atoms
+notEqParser = withInfix compareEqParser [("==",Eq),("!=",NotEq)]
 
-gtParser :: Parser Expr
-gtParser = (do x <- parserE
-               token $ literal ">"
-               y <- parserE
-               return $ Gt x y)
-               <||> atoms
+compareEqParser :: Parser Expr
+compareEqParser = withInfix compareParser [("<=",Le),(">=",Ge)]
 
-leParser :: Parser Expr
-leParser = (do x <- parserE
-               token $ literal "<="
-               y <- parserE
-               return $ Le x y)
-               <||> atoms
-			   
-geParser :: Parser Expr
-geParser = (do x <- parserE
-               token $ literal ">="
-               y <- parserE
-               return $ Ge x y)
-               <||> atoms
-			 
+compareParser :: Parser Expr
+compareParser = withInfix addSubExpr [("<",Lt),(">",Gt)]
+                  			              		 
 argParser :: Parser Expr
-argParser = (do s <- parserE
-                rest <- parserA
+argParser = (do s <- token $ parserE
+                rest <- token $ parserA
                 return $ (Arg (s:rest)))
-                <||> do s <- parserE
+                <||> do s <- token $ parserE
                         return $ (Arg [s])
 						
 revParser :: Parser Expr
 revParser = do token $ literal "-"
-               x <- parserE
+               x <- token $ parserE
                return $ Rev x
+				
 
 atoms :: Parser Expr
-atoms = ints <||> parens <||> vars
+atoms = ints <||> callParser <||> callNoArgParser <||> parens <||> vars
 
 parens :: Parser Expr
 parens = do token (literal "(")
@@ -119,15 +85,23 @@ parens = do token (literal "(")
             token (literal ")")
             return res
 			
+parensStmts :: Parser Stmts
+parensStmts = do token (literal "(")
+                 res <- parserS
+                 token (literal ")")
+                 return res
+			
 callParser :: Parser Expr
-callParser = do token $ literal "call"
-                x <- token $ varParser
-                y <- token $ argParser
+callParser = do x <- token $ varParser
+                token $ literal "("
+                y <- token $ parserE
+                token $ literal ")"
                 return $ Call x y
 				
 callNoArgParser :: Parser Expr
-callNoArgParser = do token $ literal "callNoArg"
-                     x <- token $ varParser
+callNoArgParser = do x <- token $ varParser
+                     token $ literal "("
+                     token $ literal ")"
                      return $ CallNoArg x
 			
 assignParser :: Parser Stmts
@@ -147,10 +121,10 @@ whileParser = do token $ literal "while"
                  return $ While l r	
 				 
 blockParser :: Parser Stmts
-blockParser = (do s <- parserS
-                  rest <- parser
+blockParser = (do s <- token $ parserS
+                  rest <- token $ parser
                   return $ (Block (s:rest)))
-                  <||> do s <- parserS
+                  <||> do s <- token $ parserS
                           return $ (Block [s])
 						  
 ifParser :: Parser Stmts
@@ -181,24 +155,36 @@ funcParser :: Parser Stmts
 funcParser = do token $ literal "def"
                 x <- token $ varParser
                 token $ literal "("
-                y <- token $ argParser
+                y <- token $ parserE
                 token $ literal ")"
                 token $ literal "{"
                 z <- token $ blockParser
                 token $ literal "}"
                 return $ Func x y z
+
+funcNoArgParser :: Parser Stmts
+funcNoArgParser = do token $ literal "def"
+                     x <- token $ varParser
+                     token $ literal "() {"
+                     y <- token $ blockParser
+                     token $ literal "}"
+                     return $ FuncNoArg x y				
+
 				
 returnParser :: Parser Stmts
 returnParser = do token $ literal "return"
-                  x <- token $ argParser
+                  x <- token $ parserE
+                  token $ literal ";"
                   return $ Return x
 				  
 printParser :: Parser Stmts
 printParser = do token $ literal "print"
                  x <- token $ varParser
+                 token $ literal ";"
                  return $ Print x
-                
+				 
 
-                              				 
+   
+
 
 
