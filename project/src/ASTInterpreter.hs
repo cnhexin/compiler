@@ -1,7 +1,9 @@
 module ASTInterpreter where
-
+import CParser
 import Ast
 import StatefulUnsafeMonad
+import ParserMonad
+import TestsProject
 -- import Prelude hiding (lookup)
 import Data.Map(Map, lookup, insert, empty, fromList, findWithDefault)
 -- Monad has three states :
@@ -35,8 +37,35 @@ getSt s m = case Data.Map.lookup s m of
 -- this method must be used in statements which have a integer as return value
 getRetFromSt :: Stmts -> State -> (Unsafe Integer, State)
 getRetFromSt stmts (global_state, local_state, output) = case ((app (evalSt stmts)) (global_state, local_state, output)) of
-                                                              (Ok (Ret i), (global_state, local_state, newOutput)) -> (Ok i, (global_state, local_state, newOutput))
-                                                              (_, (global_state, local_state, newOutput)) -> (Error "cant get value from statements which have no integer return value", (global_state, local_state, newOutput))
+                                                              (Ok (Ret i), (global_state, _, newOutput)) -> (Ok i, (global_state, local_state, newOutput))
+                                                              (_, (global_state, _, newOutput)) -> (Error "cant get value from statements which have no integer return value", (global_state, local_state, newOutput))
+getRetFromStWithArgs :: Stmts -> State -> String -> [Expr] -> (Unsafe Integer, State)
+getRetFromStWithArgs stmts (global_state, local_state, output) s exprs = case (app (evalSt stmts) (global_state, (insertArg (evalExs exprs (global_state, local_state, output)) (getStringFromExpr (getArgsFromSt s global_state)) local_state), output)) of 
+                                                                              (Ok (Ret i), (global_state, _, newOutput)) -> (Ok i, (global_state, local_state, newOutput))
+                                                                              (_, (global_state, _, newOutput)) -> (Error "something wrong with functions with arguments", (global_state, local_state, newOutput))
+getArgsFromSt :: String -> Map String Stmts -> [Expr]
+getArgsFromSt s m = case Data.Map.lookup s m of
+                         (Just (Func _ (Arg li) _)) -> li
+                         (Just (Func _ res _)) -> [res]
+                         _ -> undefined
+getStringFromExpr :: [Expr] -> [String]
+getStringFromExpr [] = []
+getStringFromExpr (e:ex) = case e of 
+                                Var s -> [s] ++ getStringFromExpr ex
+evalExs :: [Expr] -> State -> [Integer]
+evalExs [] s = []
+evalExs (e:es) s = case app (evalEx e) s of
+                        (Ok res,_) -> [res] ++ evalExs es s
+                        _ -> undefined
+insertArg :: [Integer] -> [String] -> Map String Integer -> Map String Integer
+insertArg [] [] map = map
+insertArg (i:is) (s:sx) map = insert s i (insertArg is sx map)
+-- change parse result to program
+changeToProgram :: Maybe (a,String) -> a
+changeToProgram (Just (x,_)) = x
+changeToProgram _ = undefined
+exprToList :: Expr -> [Expr]
+exprToList e = [e]
 -- evaluate a statement in a local environment
 -- evalInState :: StatefulUnsafe State StmtRes -> State -> (Unsafe StmtRes, [String])
 -- evalInState stateful state = case stateful state of
@@ -45,7 +74,6 @@ getRetFromSt stmts (global_state, local_state, output) = case ((app (evalSt stmt
 -- findArgList :: String -> Map String Stmts -> 
 -- ******************************************
 -- TODO : eval program
---test ::
 -- test : 
        --    1   Assign String Expr       
        --    1   While Expr Stmts |
@@ -58,9 +86,10 @@ getRetFromSt stmts (global_state, local_state, output) = case ((app (evalSt stmt
        --    1   Print String |
        --    1   Break |
        --    1   Continue 
-testCase = While (Lt (Var "x") (Val 8) ) (Block [Print "x", Assign "x" (Plus (Var "x") (Val 1)), IfElse (Gt (Var "x") (Val 3)) (Return (Val 0)) (Print "x")])
+testCase = [FuncNoArg "main" (Block [Assign "x" (Val 1), Print "x", Assign "Y" (Call "test" (Arg [(Val 10),(Val 20)])), Print "Y"]),Func "test" (Arg [Var "a", Var "b"])(Block [Return (Plus (Var "a") (Var "b"))])]
+-- While (Lt (Var "x") (Val 5) ) (Block [Print "x", Assign "x" (Plus (Var "x") (Val 1))])
 -- testCase = Func "main" (Arg [(Val 1), (Val 2)]) (Print "x")
-test = app (evalSt testCase) (Data.Map.empty, insert "x" 1 Data.Map.empty, [])
+-- test = app (evalSt testCase) (Data.Map.empty, insert "x" 0 Data.Map.empty, [])
 evalSt :: Stmts -> StatefulUnsafe State StmtRes
 evalSt (Assign s e) = do res <- evalEx e
                          setVal s res
@@ -92,7 +121,6 @@ evalSt (Return e) = do res <- evalEx e
 evalSt (FuncNoArg name stmt) = StatefulUnsafe $ \(global_state, local_state, output) -> (Ok Normal, (insert name (FuncNoArg name stmt) global_state, local_state, output))
 evalSt (Func name args stmt) = StatefulUnsafe $ \(global_state, local_state, output) -> (Ok Normal, (insert name (Func name args stmt) global_state, local_state, output))
 evalSt _ = undefined
-
 
 evalEx :: Expr -> StatefulUnsafe State Integer
 evalEx (Val num) = return num
@@ -136,7 +164,7 @@ evalEx (Lt l r) = do left <- evalEx l
                      if left < right then return 1 else return 0
 evalEx (Le l r) = do left <- evalEx l
                      right <- evalEx r
-                     if right <= left then return 1 else return 0
+                     if left <= right then return 1 else return 0
 evalEx (Gt l r) = do left <- evalEx l
                      right <- evalEx r
                      if left > right then return 1 else return 0
@@ -148,12 +176,13 @@ evalEx (Rev v) = do v <- evalEx v
 -- TODO:eval functions includes arguments
 -- evalEx (Call s Arg[x:xs]) =   
 -- each time reset local environment to empty
-evalEx (CallNoArg s) = StatefulUnsafe $ \(global_state, local_state, output) -> (getRetFromSt (getSt s global_state) (global_state, Data.Map.empty, output))
+evalEx (CallNoArg s) = StatefulUnsafe $ \(global_state, local_state, output) -> (getRetFromSt (getSt s global_state) (global_state, local_state, output))
+evalEx (Call s exps) = StatefulUnsafe $ \ (global_state, local_state, output) -> (getRetFromStWithArgs (getSt s global_state) (global_state, local_state, output) s (exprToList exps))
+evalEx (Call s (Arg exps)) = StatefulUnsafe $ \ (global_state, local_state, output) -> (getRetFromStWithArgs (getSt s global_state) (global_state, local_state, output) s exps)
 evalEx _ = undefined
-cleanLocals :: StatefulUnsafe State a -> StatefulUnsafe State a
-cleanLocals x = StatefulUnsafe $ \ (global_state, local_state, output) -> case (app x (global_state, Data.Map.empty, output)) of
-                                                                               (Ok a, (_, _, newOutput)) -> (Ok a,(global_state, local_state, newOutput))
-
+-- cleanLocals :: StatefulUnsafe State a -> StatefulUnsafe State a
+-- cleanLocals x = StatefulUnsafe $ \ (global_state, local_state, output) -> case (app x (global_state, Data.Map.empty, output)) of
+                                                                               -- (Ok a, (_, _, newOutput)) -> (Ok a,(global_state, local_state, newOutput))
 -- order : 
 -- 1. eval all the functions
 -- 2. eval main function
@@ -168,7 +197,10 @@ evalFuncs (x:xs) st =  case app (evalSt x) st of
 evalMain :: State -> [String]
 evalMain (global_state, local_state, output) = case app (evalSt (getSt "main" global_state)) (global_state, local_state, output) of
                                                     (_, (_,_,outputSt)) -> outputSt
-                                                    
+
+test :: String ->[String]
+test s = eval (changeToProgram (parse parser s))
+-- test : 1   5. 6. 7. 8. 9 10 11 12                                                
 -- eval p = getPrints $ snd $ app (eval' p) undefined
 --
 -- getPrints :: State -> [String]

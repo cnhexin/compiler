@@ -4,7 +4,7 @@ type Program = [Stmts]
 type Arguments = [Expr] -- TODO: your ast here
 
 -- TODO: Ast should have at least Eq and Show instances
-data Op = I Integer | S String | B Bool
+
 data Stmts = Assign String Expr |
              While Expr Stmts |
              Block [Stmts] |

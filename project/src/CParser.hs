@@ -72,7 +72,7 @@ argParser = (do s <- token $ parserE
 						
 revParser :: Parser Expr
 revParser = (do token $ literal "-"
-                x <- token $ parserE
+                x <- token $ revParser
                 return $ Rev x)
                 <||> notExp
 				
