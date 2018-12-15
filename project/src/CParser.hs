@@ -40,7 +40,7 @@ addSubExpr :: Parser Expr
 addSubExpr = withInfix multDivExpr [("+",Plus),("-", Minus)]
 
 multDivExpr :: Parser Expr
-multDivExpr = withInfix notExp [("*",Times),("/",Div),("%",Mod)]
+multDivExpr = withInfix revParser [("*",Times),("/",Div),("%",Mod)]
 
 orParser :: Parser Expr
 orParser = withInfix andParser [("||", Or)]
@@ -71,9 +71,10 @@ argParser = (do s <- token $ parserE
                         return $ (Arg [s])
 						
 revParser :: Parser Expr
-revParser = do token $ literal "-"
-               x <- token $ parserE
-               return $ Rev x
+revParser = (do token $ literal "-"
+                x <- token $ parserE
+                return $ Rev x)
+                <||> notExp
 				
 
 atoms :: Parser Expr

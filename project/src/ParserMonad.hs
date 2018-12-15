@@ -137,7 +137,7 @@ token pa = do spaces
 
 
 varParser :: Parser String
-varParser = do chars <- some (sat isAlpha)
+varParser = do chars <- some (sat isAlphaNum)
                return chars
 			   
 
