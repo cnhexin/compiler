@@ -23,7 +23,7 @@ parserE :: Parser Expr
 parserE = orParser <||> andParser <||> notEqParser <||> compareEqParser <||> compareParser <||> addSubExpr <||> multDivExpr <||> revParser <||> notExp <||> atoms
 
 parserS :: Parser Stmts
-parserS = funcParser <||> funcNoArgParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser <||> returnParser <||> printParser
+parserS = funcParser <||> funcNoArgParser <||> whileParser <||> assignParser <||> ifElseParser <||> ifParser <||> returnParser <||> printParser <||> continueParser <||> breakParser
 
 
 ints :: Parser Expr
@@ -183,6 +183,14 @@ printParser = do token $ literal "print"
                  x <- token $ varParser
                  token $ literal ";"
                  return $ Print x
+				 
+breakParser :: Parser Stmts
+breakParser = do token $ literal "break;"
+                 return $ Break
+				 
+continueParser :: Parser Stmts
+continueParser = do token $ literal "continue;"
+                    return $ Continue
 				 
 
    

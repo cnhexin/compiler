@@ -15,6 +15,9 @@ data StmtRes = Normal | Ret Integer | RetBR | RetCN deriving(Show)
 -- *****************************************
 -- helper functions
 -- change data type from int to [String]
+intToSingleString :: Integer -> String
+intToSingleString i = show i
+
 intToString :: Integer -> [String]
 intToString i = [show i]
 -- get value from Monad, if nothing return -1
@@ -108,7 +111,7 @@ evalSt (Block (x:xs)) = do res <- evalSt x
                                 Ret i -> return (Ret i)
                                 RetBR -> return (RetBR)
                                 RetCN -> return (RetCN)
-evalSt (Print s) = StatefulUnsafe $ \(global_state, local_state, output) -> (Ok Normal, (global_state, local_state, output ++ (intToString (getValFromMaybe(Data.Map.lookup s local_state)))))
+evalSt (Print s) = StatefulUnsafe $ \(global_state, local_state, output) -> (Ok Normal, (global_state, local_state, output ++ [((concat[s, "=", intToSingleString (getValFromMaybe(Data.Map.lookup s local_state))]))]))
 evalSt (If cond stmt) = do res <- evalEx cond
                            if (res > 0) then evalSt stmt else return Normal 
 evalSt (IfElse cond stmt1 stmt2) = do res <- evalEx cond
@@ -146,11 +149,15 @@ evalEx (Mod l r) = do left <- evalEx l
                            0 -> err "Mod by 0"
                            _ -> return (left `mod` right)
 evalEx (And l r) = do left <- evalEx l
-                      right <- evalEx r
-                      if ((intToBool left) && (intToBool right)) then (return 1) else (return 0)
+                      case (intToBool left) of
+                            False -> return 0
+                            True -> (do right <- evalEx r
+                                        if ((intToBool left) && (intToBool right)) then (return 1) else (return 0))
 evalEx (Or l r) = do left <- evalEx l
-                     right <- evalEx r
-                     if ((intToBool left) || (intToBool right)) then return 1 else return 0
+                     case (intToBool left) of
+                           True -> return 1
+                           False -> (do right <- evalEx r
+                                        if ((intToBool left) || (intToBool right)) then return 1 else return 0)
 evalEx (Not r) = do right <- evalEx r
                     if (not (intToBool right)) then return 1 else return 0
 evalEx (Eq l r) = do left <- evalEx l

@@ -1,5 +1,5 @@
 Write up
-1.	We finished the parser , interpreter and part of the compiler.
+1.	We finished the parser , the interpreter and part of the compiler.
 2.	Our AST has two components. The first part is statements which includes all the statements such as “while Expr stmts”.
 3.	The second part is expressions which includes all the expressions such as “Plus”. In this part we have two special expressions, Call String expr and CallNoArg String. They stands for function calls and function calls with no arguments.
 4.	In our Interpreter, we have three states to take along which are function map, local variable map, output string.
@@ -7,8 +7,8 @@ Write up
 a.	Eval all functions :  going through all the functions and then initialize our function map.
 b.	Eval Main : Find our main function in the function map, and then eval the statements in the main function.
 6.	The output from our parser is a Maybe, so we extract it using a helper function.
-7.	We have write a test function in the AST interpreter named test. You could test any test using command line like : “ test test1” in file AST interpreter.
-8.	We could not run any test of compiler since we did not finish the function compile part, but we finished Expressions like “Plus, Minus”
+7.	We have write a test function in the AST interpreter named test. You could test any test using command line like : “ test test1” in the AST interpreter file.
+8.	For the compiler, we finished Expressions like “Plus, Minus” and functions. It is able to return correct answers for most parts of a test, but it cannot handle temporary variables like the (Plus' (Var' "_t2") (Var' "_t1") (Var' "_t2")) in test1.
 
 Ruihong Zhu, U80536639
 Xin He, U81612345

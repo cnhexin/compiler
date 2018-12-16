@@ -13,7 +13,7 @@ data Stmts = Assign String Expr |
 			 Func String Expr Stmts |
              FuncNoArg String Stmts |
              Return Expr |
-             Print String |
+             Print String|
              Break |
              Continue 
              deriving Eq
@@ -65,6 +65,8 @@ prettyShowS (Func x y z) = "def " ++ x ++ " " ++ (prettyShowE y) ++ " " ++ (pret
 prettyShowS (FuncNoArg x y) = "def " ++ x ++ " " ++ (prettyShowS y)
 prettyShowS (Return x) = "return " ++ (prettyShowE x)
 prettyShowS (Print x) = "print " ++ x
+prettyShowS (Break) = "break"
+prettyShowS (Continue) = "continue"
  
 prettyShowE :: Expr -> String
 prettyShowE (Val i) = if i < 0
