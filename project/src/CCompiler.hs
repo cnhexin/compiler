@@ -57,6 +57,8 @@ changeStateNotEq :: Op -> Op -> StatefulUnsafe Compile_State (Op,Int)
 changeStateNotEq op1 op2 = StatefulUnsafe $ \(ic, (t:ts), bp, symbol) -> (Ok (Var' t,(length ic) + 1), (ic ++ [(NotEq' (Var' t) op1 op2)], ts, bp, symbol))
 changeStateUminus :: Op -> StatefulUnsafe Compile_State (Op,Int)
 changeStateUminus op = StatefulUnsafe $ \(ic, (t:ts), bp, symbol) -> (Ok (Var' t,(length ic) + 1), (ic ++ [Uminus' (Var' t) op], ts, bp, symbol))
+changeStateNot ::Op -> StatefulUnsafe Compile_State (Op,Int)
+changeStateNot op = StatefulUnsafe $ \(ic, (t:ts), bp, symbol) -> (Ok (Var' t,(length ic) + 1), (ic ++ [Not' (Var' t) op], ts, bp, symbol))
 
 -- insert function to symbol table
 insertFunction :: String -> Expr -> Stmts -> StatefulUnsafe Compile_State Int
@@ -122,21 +124,24 @@ compileStmt (Func name args stmt) = StatefulUnsafe $ \state -> case app (insertF
 compileStmt (Return e) = do res <- compileExpr e
                             changeStateReturn (getOp res)
 compileStmt (If e stmt) = StatefulUnsafe $ \state -> case app (compileExpr e) state of
-                                                          (Ok (res,t_back), (ic,temp,(t,f,b,c), symbol)) -> case app (changeStateIf res) (backpatchingJump t t_back ic, temp, ([],f,b,c),symbol) of
-                                                                                     (_, newState2) -> case app (compileStmt stmt) newState2 of
-                                                                                                            (Ok address,(ic,temp,(t,f,b,c),symbol)) -> (Ok address, ((backpatching f address res ic),temp,(t,[],b,c),symbol))
+                                                          (Ok (res,t_back),newState)-> case app (changeStateIf res) newState of
+                                                                                   (Ok backtrack, (ic,temp,(t,f,b,c), symbol)) -> case app (compileStmt stmt) (backpatchingJump t backtrack ic, temp, ([],f,b,c),symbol) of
+                                                                                                                                                     (Ok address,(ic,temp,(t,f,b,c),symbol)) -> (Ok address, (backpatching (f++[t_back]) address res ic,temp,(t,[],b,c),symbol))
 compileStmt (Block []) = StatefulUnsafe $ \(ic, t, br, symbol) -> ((Ok (length ic)), (ic,t,br,symbol))
 compileStmt (Block (s:sx)) =  do _ <- compileStmt s
                                  compileStmt (Block sx)                                                       
 compileStmt (IfElse e st1 st2) = StatefulUnsafe $ \state -> case app (compileExpr e) state of
-                                                                 (Ok (res,_),newState) -> case app (changeStateIf res) newState of
+                                                                 (Ok (res,t_back),newState) -> case app (changeStateIf res) newState of
                                                                                                (_,newState2) -> case app (compileStmt st1) newState2 of
-                                                                                                                     (Ok false_address,(ic,temp,(t2,f2,b2,c2),symbol)) -> case app (compileStmt st2) ((backpatching f2 ((length ic) + 1) res (ic++[Jump' 0])),temp,(t2++[length ic],[],b2,c2),symbol) of
-                                                                                                                                                                           (Ok true_address,(ic,temp,(t,f,b,c),symbol)) -> (Ok true_address, ((backpatchingJump t (length ic) ic),temp,([],f,b,c),symbol))
+                                                                                                                     (Ok false_address,(ic,temp,(t2,f2,b2,c2),symbol)) -> case app (compileStmt st2) ((backpatching (f2++[t_back]) ((length ic) + 1) res (ic++[Jump' 0])),temp,(t2++[length ic],[],b2,c2),symbol) of
+                                                                                                                                                                           (Ok true_address,(ic,temp,(t,f,b,c),symbol)) -> (Ok true_address, ((backpatchingJump (t++[false_address]) (length ic) ic),temp,([],f,b,c),symbol))
                                                                  
 compileStmt (While e s) = StatefulUnsafe $ \state -> case app (compileExpr e) state of
                                                           (Ok (op,ex_address), (ic,temp,(t,f,b,c),symbol)) -> case app (compileStmt s) (backpatchingJump t ex_address ic ++ [Bzero' op 0,Jump' ((length ic) + 2)], temp, ([],f ++ [length ic],b,c),symbol) of
-                                                                                                                   (Ok _,(ic,temp,(t,f,b,c),symbol)) -> (Ok ((length ic) + 1), (backpatching (f ++ [ex_address]) ((length ic) + 1) op (ic ++ [Jump' (ex_address - 1)]),temp,(t,[],b,c),symbol))
+                                                                                                                   (Ok _,(ic,temp,(t,f,b,c),symbol)) -> (Ok (length ic + 1), (backpatchingJump c ex_address (backpatchingJump b (length ic + 1) (backpatching (f ++ [ex_address]) ((length ic) + 1) op (ic ++ [Jump' (ex_address - 1)]))),temp,(t,[],[],[]),symbol))
+compileStmt Break = StatefulUnsafe $ \(ic, temp, (t,f,b,c), symbol) -> (Ok (length ic), (ic++[Jump' 0], temp, (t,f,b ++[length ic],c), symbol))
+compileStmt Continue = StatefulUnsafe $ \(ic, temp, (t,f,b,c), symbol) -> (Ok (length ic), (ic++[Jump' 0], temp, (t,f,b,c ++ [length ic]), symbol))
+
 compileStmt _ = undefined
 
 -- add continue and break together
@@ -148,7 +153,6 @@ backpatching (x:xs) address op program = case (program !! x) of
 backpatchingJump :: [Int] -> Int -> IC_Program -> IC_Program
 backpatchingJump [] _ program = program
 backpatchingJump (x:xs) address program = backpatchingJump xs address (take x program ++ [Jump' address] ++ drop (x+1) program)
-
 compileExpr :: Expr -> StatefulUnsafe Compile_State (Op,Int)
 compileExpr (Val i) = return (Val' (fromInteger i),0)
 compileExpr (Var s) = return (Var' s,0)
@@ -195,15 +199,17 @@ compileExpr (And e1 e2) = do res1 <- compileExpr e1
                              changeStateAnd (getOp res1)
                              res2 <- compileExpr e2
                              changeStateAnd (getOp res2)
--- compileExpr (Or e1 e2) = do res1 <- compileExpr e1
---                              changeStateOr (getOp res1)
---                              res2 <- compileExpr e2
---                              changeStateOr (getOp res2)
--- compileExpr (Not e) = 
+compileExpr (Or e1 e2) = do res1 <- compileExpr e1
+                            changeStateOr (getOp res1)
+                            res2 <- compileExpr e2
+                            changeStateOr2 (getOp res2)
+compileExpr (Not e) = do res <- compileExpr e
+                         changeStateNot (getOp res)
 compileExpr (CallNoArg s) = changeStateFuncNoArg s
 compileExpr (Call s e) = do res <- compileExpr e
                             changeStateFunc s (getOp res)
 compileExpr _ = undefined 
+
 changeStateFuncNoArg :: String -> StatefulUnsafe Compile_State (Op,Int)
 changeStateFuncNoArg s = StatefulUnsafe $ \(ic,(t:ts),bp,symbol) -> (Ok (Var' t,(length ic) + 3),(ic ++ [Push', Call' (getFuncAdd symbol s),Assign' (Var' t) (Var' "_ret_val")],ts,bp,symbol))
 
@@ -217,9 +223,12 @@ getFuncArg :: Map String (Integer, Expr, Stmts) -> String -> String
 getFuncArg m s = case Data.Map.lookup s m of
                       Just (_,Var e,_) -> e
 changeStateAnd :: Op ->StatefulUnsafe Compile_State (Op,Int)
-changeStateAnd op = StatefulUnsafe $ \(ic,temp,(t,f,b,c),symbol) -> (Ok (op,(length ic) + 2), (ic ++ [Bzero' op 0, Jump' 0],temp,(t++[(length ic) + 1],f++[length ic],b,c),symbol)) 
--- changeStateOr :: Op ->StatefulUnsafe Compile_State (Op,Int)
--- changeStateOr op = StatefulUnsafe $ \(ic,temp,(t,f,b,c),symbol) -> (Ok (op,(length ic) + 2), (ic ++ [Bzero' op 0, Jump' 0],temp,(t,f++[length ic],b,c),symbol)) 
+changeStateAnd op = StatefulUnsafe $ \(ic,temp,(t,f,b,c),symbol) -> (Ok (op,(length ic) + 2), ((ic ++ [Bzero' op 0, Jump' ((length ic) + 2)]),temp,(t,f++[length ic],b,c),symbol)) 
+changeStateOr :: Op ->StatefulUnsafe Compile_State (Op,Int)
+changeStateOr op = StatefulUnsafe $ \(ic,temp,(t,f,b,c),symbol) -> (Ok (op,(length ic) + 2), ((ic ++ [Bzero' op ((length ic) + 2), Jump' 0]),temp,(t++[(length ic) + 1],f,b,c),symbol)) 
+
+changeStateOr2 :: Op ->StatefulUnsafe Compile_State (Op,Int)
+changeStateOr2 op = StatefulUnsafe $ \(ic,temp,(t,f,b,c),symbol) -> (Ok (op,(length ic) + 2), (backpatching f (length ic - 2) op (ic ++ [Bzero' op 0, Jump' 0]),temp,(t++[(length ic) + 1],[length ic],b,c),symbol)) 
 
 -- test_compile :: String -> IC_Program
 test_compile s = compile (changeToProgram (parse parser s))
