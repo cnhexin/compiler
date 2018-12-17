@@ -8,7 +8,8 @@ a.	Eval all functions :  going through all the functions and then initialize our
 b.	Eval Main : Find our main function in the function map, and then eval the statements in the main function.
 6.	The output from our parser is a Maybe, so we extract it using a helper function.
 7.	We have write a test function in the AST interpreter named test. You could test any test using command line like : “ test test1” in the AST interpreter file.
-8.	For the compiler, we finished Expressions like “Plus, Minus” and functions. It is able to return correct answers for most parts of a test, but it cannot handle temporary variables like the (Plus' (Var' "_t2") (Var' "_t1") (Var' "_t2")) in test1.
+8.	For the compiler, we finished most parts of it. It is able to return correct answers for all the test except test6.
+9.      Please use ":l CCompiler" to go to the compiler file and use enter in the format of "execute (test_compile test1)" to run tests.
 
 Ruihong Zhu, U80536639
 Xin He, U81612345
