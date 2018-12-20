@@ -17,3 +17,5 @@ Sahil Gupta, U76251513
 
 -----
 parser: 10/10
+compiler: 10/10
+compiler_comment: thanks for the tests!
