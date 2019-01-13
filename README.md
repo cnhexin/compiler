@@ -382,35 +382,3 @@ GCD of 2868 and 264:
   18: res = _t2
   19: print "res = " res
   20: return 0
-
-The result of running this example in the ICInterpreter would be a list containing
-the result of the print statement in line 19, showing that GCD(2868,264) is 12:
-
-  ICInterpreter> execute icTest11
-  Just ["res = 12"]
-  
-  ICInterpreter>
-
-
-Further examples of IC Programs are found in the test cases in the
-file ICInterpreter.hs.  Use showICProgram to see readable versions
-of these programs. 
-
-
-def update_weights(m, b, X, Y, learning_rate):
-    m_deriv = 0
-    b_deriv = 0
-    N = len(X)
-    for i in range(N):
-        # Calculate partial derivatives
-        # -2x(y - (mx + b))
-        m_deriv += -2*X[i] * (Y[i] - (m*X[i] + b))
-
-        # -2(y - (mx + b))
-        b_deriv += -2*(Y[i] - (m*X[i] + b))
-
-    # We subtract because the derivatives point in direction of steepest ascent
-    m -= (m_deriv / float(N)) * learning_rate
-    b -= (b_deriv / float(N)) * learning_rate
-
-    return m, b
