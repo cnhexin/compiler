@@ -1,132 +1,10 @@
 # Fall-2018
 
 Overview:
-
-     Your last assignment for the semester will be a compiler. The source language is a small subset of C,
-called Mini-C, and the target language is an Intermediate Code which will be executed by a simple
-IC interpreter provided to you. Details of the source language and the target language will be provided
-in this document. You will also write an interpreter for the ASTs produced by your parser. This
-will the final example of recursive language evaluators pursued through the homeworks, and will also
-provide a test of your compiler. 
-
-In this document you will be given a description of the source language, the target language, and some
-requirements. In general you will have a lot of flexibility in your implementation, and any reasonable,
-correct solution will receive full credit.
-
-Administrative Details
-
-     The project is due Friday, 12/14/18, by midnight in github. Code templates (with types for the major
-components), tests, and source code for the IC interpreter will be provided shortly.
-     You may write this project by yourself, a parter, or a team of three people. No teams of more than
-three will be allowed. All deliverables should be submitted by one member of the team, and have the
-names of all team members specified. All will receive equal credit for the work.
-     The project will be graded on a scale of 100, scaled to 5% of your final grade, allocated as follows:
-
-  10%  Parser (CParser.hs) -- This will take a String representing a Mini-C program and produce an
-          AST expression for the program.  
-
-  40%  Interpreter (ASTInterpreter.hs) -- This will take an AST expression output by the parser, evaluate it,
-          and return a list of Strings (produced by print statements in the program).
-
-
-  45%  Compiler (CCompiler.hs)  -- This will take an AST expression and convert it into an Intermediate Code
-          program (a list of IC statements). This IC program can then be executed by the IC interpreter provided
-	  to generate output from the print statements in the program. 
-
-  5%  Additional features (FeaturesTests.hs))  -- For the final 5% of the grade, you must implement at
-          least two refinements to the project. Some possibilities for this are as follows, but you ma
-	  consult with us about your own ideas. Each of these is worth 2.5%, so you can do any two (no
-	  extra credit if you do more, though we'll be impressed and I'll be sure to mention it if
-	  you ask me for a recommendation down the road!). 
-
-          o   Code optimizer -- Use a stack-based allocation scheme for temporaries to reuse them
-	          intelligently, and eliminate redundant jumps.
-
-          o   Add additional language features to Mini-C: comments, for loop, do-while loop. 
-
-          o   Modify the grammar (and hence the entire project) to allow any number of arguments
-	          to a function and allow procedures (functions that do not return arguments).
-
-          o   Add a list data type and built in functions (cons, nil, head, tail, indexing) to manipulate lists.
-	        Type errors (e.g., trying to add a list and an int) can be ignored (just let the program crash!)
-
-          o   Add floats to the language and write a simple static type checker which will flag errors before
-	        execution. Or you could do this for lists (combining with the previous item).
-
-          o   Add nested function definitions to the language (functions defined inside other functions).
-
-       Provide a file FeaturesTests.hs with tests that prove your additional features work as required. We may
-       test your code on our own tests as well.
-
-       Make sure that your implementation works on the basic tests, as well as any additional features tests
-       you may write. If you want to add required type declarations this would be a problem, so talk to us
-       before you go down this road. 
-
-
-      Please talk to us if you have any other ideas. There are many possibilities!
-
-Submit a file CS320Project.txt along with all your code files which gives the names of the team members
-and specifies which of the additional features you have implemented. Also give us any other
-information you feel we should know. We will test your code on the test cases provided and
-also write some of our own tests. Testing your code with your own tests is part of the project!
-
-
-Some Advice on How to Proceed
-
-Start by dividing up the work among your team members. There are several
-linked phases:
-
-
-      Parser  -> AST  ->  AST Interpreter ----------------------------------------------> Output (list of Strings)
-                  |                                                                       ^
-		  |---->  Compiler  ---> IC Program -------->  IC Interpreter (provided) -|
-		                               |                ^
-			                       | --> Optimizer -|
-					       
-
-The first task is to decide on the AST which can represent the source language; this
-should be fairly easy, since we have been doing this kind of thing all semester.
-One thing you should think about is whether you want to have an explicit
-"separator" to create lists of statements, or whether you just want to
-have Haskell lists of statements. In lecture I tended to write ASTs on
-the board using the former, but you may find (as I did) that using
-explicit lists is easier: for for example, in my AST I had programs defined
-as:
-
-type Program = [Func]                 -- a program is a list of function definitions                      
-
-and then later I had:
-
-data Stmt =  Block [Stmt]
-          |  etc.
-
-
-Once you have decided on the AST, then you can break the basic work into separate
-pieces. Some of the additional features can not be separated out (e.g., reworking
-the grammar), so maybe you want to put them in the plan from the beginning.
-
-The parser, the AST Interpreter, and the optimizer are the least amount of work,
-and the compiler is probably as much work as all these combined, so plan accordingly.
-Some parts of the compiler are busywork, since after you have figured out how to,
-say compile one kind of expression, the rest are exactly the same and you end up
-cutting and pasting.
-
-You can begin to test your implementations using the examples below and
-in the ICInterpreter.hs file (e.g., optimization). Additional
-test cases may be provided, but we will also use our own test cases, so
-testing and making sure everything works as it should is part of the project!
-
-One nice way to check your work is to verify that the AST interpreter and
-the IC Interpreter (after compilation) produce the same results.
-
+	I have written a compiler. The source language is a small subset of C, called Mini-C, and the target language is an Intermediate Code which will be executed by a simple IC interpreter. Also I have finished a parser to parse the program from string to abstract syntax tree. At the same time, I wrote a interpreter which can interprete the program to get the print output.
 
 
 The Source Language: Mini-C
-
-The grammar for the source language has been provided in the lecture slides for lecture 24, but here it is
-again for your convenience (there have been some changes made relative to what was actually presented in
-the lecture, but the PDF of the lecture slides has been updated -- mostly I changed the language so
-that only function definitions may be given at the top level, and there is no global memory). 
 
 0: Program := Funcs
 1: Funcs := Func Funcs
@@ -175,10 +53,7 @@ that only function definitions may be given at the top level, and there is no gl
 
 
 
-Here are some examples of the Mini-C language. Translations of these
-are provided as examples in the file ICInterpreter.hs, with the same numbers. 
-Some of these may be provided as test cases in github. 
-
+Here are some examples of the Mini-C language. 
 
 -----------------------------------------------------------------
 Test 1: Just a simple example of expression evaluation
